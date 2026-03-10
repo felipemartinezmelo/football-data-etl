@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Build / Distribuição
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# Configurações locais
+config.ini
+config.py
+
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
+
+# JSON locais 
+*.json
+
+# IDEs
+.vscode/
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
