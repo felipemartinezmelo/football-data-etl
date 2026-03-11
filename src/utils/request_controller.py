@@ -1,9 +1,9 @@
-import time
 import logging
-import mysql.connector
+import time
+from typing import Any, Iterable, List, Optional, Tuple
 
+import mysql.connector
 from mysql.connector import MySQLConnection
-from typing import Iterable, List, Tuple, Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class RequestControl:
     def __init__(
         self,
         connection: MySQLConnection,
-        table_name: str = "controleRequisicao",
+        table_name: str = "controle_requisicao",
         max_retries: int = 5,
         retry_delay: float = 0.5,
     ) -> None:
@@ -35,28 +35,23 @@ class RequestControl:
         if self.cursor:
             self.cursor.close()
 
-    def create(self,entity_ids: Iterable[str],request_type: str,start_page: int = 1,) -> None:
-
-        values: List[Tuple[Any, ...]] = [
-            (entity_id, request_type, start_page, 0)
-            for entity_id in entity_ids
-        ]
+    def create(self, entity_ids: Iterable[str], request_type: str, start_page: int = 1,) -> None:
+        values: List[Tuple[Any, ...]] = [(entity_id, request_type, start_page, 0) for entity_id in entity_ids]
 
         sql = f"""
             INSERT IGNORE INTO {self.table_name}
-            (entidade_id, tipoRequisicao, pagina, completado)
+            (entidade_id, tipo_requisicao, pagina, completado)
             VALUES (%s, %s, %s, %s)
         """
 
         self._execute(sql, values)
 
     def get_page(self, entity_id: str, request_type: str, lock: bool = False,) -> int:
-
         sql = f"""
             SELECT pagina
             FROM {self.table_name}
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
         """
 
         if lock:
@@ -74,7 +69,7 @@ class RequestControl:
             SELECT 1
             FROM {self.table_name}
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
               AND completado = 0
         """
 
@@ -87,7 +82,7 @@ class RequestControl:
             UPDATE {self.table_name}
             SET pagina = %s
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
         """
 
         self._execute(sql, (page, entity_id, request_type),)
@@ -97,7 +92,7 @@ class RequestControl:
             UPDATE {self.table_name}
             SET pagina = pagina + 1
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
         """
 
         self._execute(sql, (entity_id, request_type),)
@@ -107,7 +102,7 @@ class RequestControl:
             UPDATE {self.table_name}
             SET completado = 1
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
               AND completado = 0
         """
 
@@ -116,7 +111,7 @@ class RequestControl:
     def delete_by_type(self, request_type: str,) -> None:
         sql = f"""
             DELETE FROM {self.table_name}
-            WHERE tipoRequisicao = %s
+            WHERE tipo_requisicao = %s
         """
 
         self._execute(sql, (request_type,),)
@@ -125,7 +120,7 @@ class RequestControl:
         sql = f"""
             DELETE FROM {self.table_name}
             WHERE entidade_id = %s
-              AND tipoRequisicao = %s
+              AND tipo_requisicao = %s
         """
 
         self._execute(sql, (entity_id, request_type),)
@@ -135,7 +130,6 @@ class RequestControl:
 
         while attempt < self.max_retries:
             try:
-
                 if isinstance(params, list):
                     self.cursor.executemany(sql, params)
 
@@ -148,12 +142,11 @@ class RequestControl:
                 self.connection.commit()
                 return None
 
-            except mysql.connector.Error as err:
-
+            except mysql.connector.Error as e:
                 self.connection.rollback()
                 attempt += 1
 
-                logger.warning("Erro SQL (tentativa %s/%s): %s", attempt, self.max_retries, err,)
+                logger.warning("Erro SQL (tentativa %s/%s): %s", attempt, self.max_retries, e,)
 
                 if attempt >= self.max_retries:
                     logger.error("Falha definitiva na execução SQL.")

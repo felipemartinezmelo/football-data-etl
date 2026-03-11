@@ -1,14 +1,15 @@
-import time
 import logging
-import requests
+import time
+from typing import Any, Dict, Optional
 
+import requests
 from requests import Response, Session
-from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 class RequestError(Exception):
     """Erro genérico de requisição HTTP."""
+
 
 class MaxRetriesExceeded(RequestError):
     """Erro quando o número máximo de tentativas é atingido."""
@@ -31,14 +32,12 @@ class RequestEndpoint:
         self.backoff_factor = backoff_factor
         self.session: Session = requests.Session()
 
-
     def _build_url(self, endpoint: str) -> str:
         if endpoint.startswith("http://") or endpoint.startswith("https://"):
             return endpoint
         return f"{self.base_url}/{endpoint.lstrip('/')}" if self.base_url else endpoint
 
     def _build_headers(self, headers: Optional[Dict[str, str]] = None,) -> Dict[str, str]:
-
         final_headers = {"Content-Type": "application/json"}
 
         if headers:
@@ -50,9 +49,8 @@ class RequestEndpoint:
         return final_headers
 
     def request(
-        self,
-        method: str,
-        endpoint: str,
+        self, 
+        method: str, endpoint: str, 
         payload: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
@@ -69,8 +67,7 @@ class RequestEndpoint:
 
                 response = self.session.request(
                     method=method.upper(),
-                    url=url,
-                    headers=headers,
+                    url=url, headers=headers,
                     json=payload,
                     params=params,
                     timeout=self.timeout,
@@ -87,13 +84,15 @@ class RequestEndpoint:
                         f"Status: {response.status_code}"
                     )
 
-            except requests.RequestException as exc:
-                logger.error("Erro de conexão na requisição %s %s: %s", method.upper(), url, exc,)
+            except requests.RequestException as e:
+                logger.error("Erro de conexão na requisição %s %s: %s", method.upper(), url, e,)
 
                 if attempt == self.max_retries:
-                    raise MaxRetriesExceeded(f"Erro após {self.max_retries} tentativas") from exc
+                    raise MaxRetriesExceeded(
+                        f"Erro após {self.max_retries} tentativas"
+                    ) from e
 
-            sleep_time = self.backoff_factor * (2 ** attempt)
+            sleep_time = self.backoff_factor * (2**attempt)
             time.sleep(sleep_time)
             attempt += 1
 

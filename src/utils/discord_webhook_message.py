@@ -1,11 +1,12 @@
-import os
 import logging
-import requests
-
-from zoneinfo import ZoneInfo
+import os
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
+
+import requests
 from dotenv import load_dotenv
-from typing import Optional, Dict, Any, List
+
 from src.utils.request_endpoint import RequestEndpoint
 
 load_dotenv()
@@ -67,11 +68,7 @@ class DiscordWebhookMessage:
         avatar_url: Optional[str] = os.getenv(env_var)
 
         if not avatar_url:
-            logger.warning(
-                "Avatar não encontrado para o serviço '%s'. "
-                "Verifique o .env.",
-                service_type,
-            )
+            logger.warning("Avatar não encontrado para o serviço '%s'. " "Verifique o .env.", service_type,)
 
         return avatar_url
 
