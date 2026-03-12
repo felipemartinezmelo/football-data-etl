@@ -7,121 +7,119 @@ from src.utils.discord_webhook_message import DiscordWebhookMessage
 
 logger = logging.getLogger(__name__)
 
-class CountriesService:
+class LeaguesService:
     def execute(self) -> None:
         self.error = False
 
         try:
             with Connections("etl") as (conn, cursor):
-
                 self.conn = conn
                 self.cursor = cursor
 
                 logger.info("Conexão com o banco ETL estabelecida")
 
                 credentials = self.get_credentials()
-
                 if not credentials:
                     logger.warning("Credenciais da API-Football não encontradas")
                     return
 
                 client = FootballApiClient(base_url=credentials["urlApi"], api_key=credentials["appSecretKey"])
 
+                countries_map = self.get_countries_db()
+
                 raw_data = self.extract(client)
-
                 if not raw_data:
-
-                    logger.warning("Nenhum país retornado da API")
+                    logger.warning("Nenhuma liga retornada da API")
                     return
 
-                mapped_data = self.transform(raw_data)
-
+                mapped_data = self.transform(raw_data, countries_map)
                 if not mapped_data:
-
-                    logger.warning("Nenhum país válido após transformação")
+                    logger.warning("Nenhuma liga válida após transformação")
                     return
 
                 self.load(mapped_data)
 
         except Exception as e:
             self.error = True
-
-            logger.error(f"Erro na execução do ETL dos países: {e}")
-
-            DiscordWebhookMessage.send_message("Futebol - Países", f"Erro durante a execução: {e}", False, "football")
+            logger.error(f"Erro na execução do ETL das ligas: {e}")
+            DiscordWebhookMessage.send_message("Futebol - Ligas", f"Erro durante a execução: {e}", False, "football")
 
         finally:
-            logger.info("Processo de ETL dos países finalizado")
+            logger.info("Processo de ETL das ligas finalizado")
 
         if not self.error:
-            DiscordWebhookMessage.send_message("Futebol - Países", "Processo executado com sucesso.", True, "football")
+            DiscordWebhookMessage.send_message("Futebol - Ligas", "Processo executado com sucesso.", True, "football")
+
 
     def get_credentials(self) -> Dict[str, str]:
         logger.info("Buscando credenciais da API-Football")
-
         sql = """
         SELECT app_secret_key, url_api
         FROM etl.credenciais
         WHERE nome_sistema = 'API-Football'
         LIMIT 1
         """
-
         self.cursor.execute(sql)
-
         result = self.cursor.fetchone()
-
         return result
 
+    def get_countries_db(self) -> Dict[str, int]:
+        logger.info("Buscando países já inseridos no banco de dados")
+        sql = "SELECT id, nome FROM futebol_paises"
+        self.cursor.execute(sql)
+        rows = self.cursor.fetchall()
+        return {name.lower(): id for id, name in rows}
+
     def extract(self, client: FootballApiClient) -> List[Dict[str, Any]]:
-        logger.info("Extraindo países da API")
+        logger.info("Extraindo todas as ligas da API")
+        return client.get_leagues()
 
-        return client.get_countries()
-
-    def transform(self, data: List[Dict[str, Any]]) -> List[Tuple]:
-        logger.info("Transformando dados dos países")
+    def transform(self, data: List[Dict[str, Any]], countries_map: Dict[str, int]) -> List[Tuple]:
+        logger.info("Transformando dados das ligas")
 
         mapped = []
 
         for item in data:
+            league = item.get("league", {})
+            country = item.get("country", {})
 
-            nome = item.get("name")
-            codigo = item.get("code")
-            url_bandeira = item.get("flag")
+            country_name = (country.get("name") or "").lower()
+            country_id = countries_map.get(country_name)
 
-            if not codigo:
-                continue
+            codigo = league.get("id")
+            nome = league.get("name")
+            tipo = league.get("type")
+            url_logo = league.get("logo")
 
-            mapped.append((nome, codigo, url_bandeira))
+            mapped.append((codigo, nome, tipo, country_id, url_logo))
 
-        logger.info(f"{len(mapped)} países preparados para inserção")
-
+        logger.info(f"{len(mapped)} ligas preparadas para inserção")
         return mapped
 
     def load(self, data: List[Tuple]) -> None:
-        logger.info(f"Inserindo {len(data)} países no banco de dados")
+        logger.info(f"Inserindo {len(data)} ligas no banco de dados")
 
         sql = """
-        INSERT INTO futebol_paises
+        INSERT INTO futebol_ligas
         (
+            codigo,        
             nome,
-            codigo,
-            url_bandeira
+            tipo,
+            pais_id,
+            url_logo
         )
-        VALUES (%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s)
         ON DUPLICATE KEY UPDATE
             nome = VALUES(nome),
-            url_bandeira = VALUES(url_bandeira)
+            tipo = VALUES(tipo),
+            url_logo = VALUES(url_logo),
+            pais_id = VALUES(pais_id)
         """
-
         try:
             self.cursor.executemany(sql, data)
-
             self.conn.commit()
-
-            logger.info("Inserção de países concluída com sucesso")
-
+            logger.info("Inserção de ligas concluída com sucesso")
         except Exception as e:
             self.conn.rollback()
-
-            logger.error(f"Erro ao inserir países no banco de dados: {e}")
+            logger.error(f"Erro ao inserir ligas no banco de dados: {e}")
             raise
