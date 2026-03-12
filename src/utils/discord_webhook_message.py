@@ -1,12 +1,11 @@
-import logging
 import os
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-from zoneinfo import ZoneInfo
-
+import logging
 import requests
-from dotenv import load_dotenv
 
+from zoneinfo import ZoneInfo
+from datetime import datetime
+from dotenv import load_dotenv
+from typing import Any, Dict, List, Optional
 from src.utils.request_endpoint import RequestEndpoint
 
 load_dotenv()

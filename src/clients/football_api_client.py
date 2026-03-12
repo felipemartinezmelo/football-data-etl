@@ -1,5 +1,4 @@
 from typing import Any, Dict, List
-
 from src.utils.request_endpoint import RequestEndpoint
 
 class FootballApiClient:
@@ -17,6 +16,13 @@ class FootballApiClient:
     
     def get_leagues(self) -> List[Dict[str, Any]]:
         response = self.api_client.get("/leagues", headers=self.headers)
+
+        data = response.json()
+
+        return data.get("response", [])
+    
+    def get_seasons(self) -> List[int]:
+        response = self.api_client.get("/leagues/seasons", headers=self.headers)
 
         data = response.json()
 

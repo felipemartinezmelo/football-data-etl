@@ -1,9 +1,9 @@
-import logging
 import time
-from typing import Any, Dict, Optional
-
+import logging
 import requests
+
 from requests import Response, Session
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

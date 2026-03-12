@@ -1,8 +1,8 @@
 import os
-from typing import Any, Optional, Tuple, Union
-
 import mysql.connector
+
 from dotenv import load_dotenv
+from typing import Any, Optional, Tuple, Union
 
 load_dotenv()
 
