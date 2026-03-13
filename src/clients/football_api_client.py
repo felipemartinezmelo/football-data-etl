@@ -27,3 +27,12 @@ class FootballApiClient:
         data = response.json()
 
         return data.get("response", [])
+
+    def get_teams(self, country: str) -> List[Dict[str, Any]]:
+        params = {"country": country}
+
+        response = self.api_client.get("/teams", params=params, headers=self.headers)
+
+        data = response.json()
+
+        return data.get("response", [])
